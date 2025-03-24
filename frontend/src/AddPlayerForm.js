@@ -11,7 +11,6 @@ const AddPlayerForm = ({ selectedPlayer }) => {
 
   const [playerId, setPlayerId] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
-  const [editing, setEditing] = useState(false);
 
   useEffect(() => {
     if (selectedPlayer) {
