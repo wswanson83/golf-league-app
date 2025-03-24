@@ -21,7 +21,6 @@ const AddPlayerForm = ({ selectedPlayer }) => {
         phone: selectedPlayer.phone_number || ''
       });
       setPlayerId(selectedPlayer.player_id);
-      setEditing(true);
       setSuccessMessage('');
     }
   }, [selectedPlayer]);
@@ -47,7 +46,6 @@ const AddPlayerForm = ({ selectedPlayer }) => {
         if (!playerId) {
           setPlayerId(response.data.playerId);
         }
-        setEditing(false);
       })
       .catch(error => {
         console.error('Error saving player:', error);
