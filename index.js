@@ -1,19 +1,17 @@
-// index.js
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const mysql = require('mysql2');
-require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Enable CORS (allows your frontend to communicate with backend)
+// Enable CORS and JSON parsing BEFORE defining routes
 app.use(cors());
-
-// Enable JSON parsing
 app.use(express.json());
 
-// Set up MySQL database connection clearly using .env variables
+// Set up MySQL connection
+console.log('🌱 DB selected:', process.env.DB_NAME);
 const db = mysql.createConnection({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
@@ -21,7 +19,6 @@ const db = mysql.createConnection({
   database: process.env.DB_NAME
 });
 
-// Test MySQL connection clearly
 db.connect((err) => {
   if (err) {
     console.error('❌ Database connection failed:', err);
@@ -30,12 +27,20 @@ db.connect((err) => {
   }
 });
 
-// Simple test route clearly
+// Test route
 app.get('/', (req, res) => {
   res.send('🏌️‍♂️ Golf League API connected to MySQL!');
 });
 
-// Start your server
+// Mount API routes
+const authRoutes = require('./routes/auth');
+app.use('/api', authRoutes);
+
+// Start the server
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
+});
+
 
 // add new player
 app.post('/players', (req, res) => {
@@ -74,19 +79,8 @@ app.put('/players/:id', (req, res) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server running clearly on port ${PORT}`);
-});
+
 // Example route to clearly test database interaction
-app.get('/players', (req, res) => {
-  db.query('SELECT * FROM Players ORDER BY last_name, first_name' , (error, results) => {
-    if (error) {
-      res.status(500).send('Database error');
-    } else {
-      res.json(results);
-    }
-  });
-});
 app.get('/players', (req, res) => {
   const sql = 'SELECT * FROM Players ORDER BY last_name, first_name';
 
@@ -98,3 +92,4 @@ app.get('/players', (req, res) => {
     res.json(results);
   });
 });
+

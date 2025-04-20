@@ -1,0 +1,36 @@
+cd "C:\Users\Wes Swanson\golf-league-app"
+
+
+$2b$10$zvAbagK.FBOUPwUesZDrHOG0MxnNZeKy7wqxkRMAmg/hZ.hfPtySO
+
+
+
+Every time you test login, make sure both are running:
+✅ Backend:
+bash
+Copy
+Edit
+cd "C:\Users\Wes Swanson\golf-league-app"
+nodemon index.js
+You should see:
+
+pgsql
+Copy
+Edit
+🌱 DB selected: golfleague
+🚀 Server running on http://localhost:5000
+✅ Connected successfully to your MySQL database!
+✅ Frontend:
+In a separate terminal:
+
+bash
+Copy
+Edit
+cd "C:\Users\Wes Swanson\golf-league-app\frontend"
+npm start
+You should see:
+
+mathematica
+Copy
+Edit
+Compiled successfully!
