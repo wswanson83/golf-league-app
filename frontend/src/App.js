@@ -6,7 +6,8 @@ import SetCourseForm from './components/SetCourseForm';
 import TournamentHistory from './components/TournamentHistory';
 import EditTournament from './components/EditTournament';
 import ScoreEntryForm from './components/ScoreEntryForm';
-
+import PlayerManagement from './components/PlayerManagement';
+import Scoreboard from './components/Scoreboard';
 
 
 function App() {
@@ -21,6 +22,8 @@ function App() {
         <Route path="/" element={<Login />} />
         <Route path="/dashboard" element={<AdminDashboard />} />
         <Route path="/score-entry" element={<ScoreEntryForm />} />
+        <Route path="/players" element={<PlayerManagement />} />
+        <Route path="/scoreboard" element={<Scoreboard />} />
       </Routes>
     </Router>
   );

@@ -36,7 +36,7 @@ const PlayersList = ({ onPlayerSelect }) => {
         }}
       />
 
-      {searchTerm ? (
+{searchTerm ? (
   filteredPlayers.length > 0 ? (
     <>
       <p style={{ fontStyle: 'italic', marginBottom: '0.5rem' }}>
@@ -44,23 +44,47 @@ const PlayersList = ({ onPlayerSelect }) => {
       </p>
       {filteredPlayers.map(player => (
         <div
-          key={player.player_id}
-          onClick={() => onPlayerSelect(player)}
-          style={{
-            padding: '0.5rem 0',
-            borderBottom: '1px solid #ccc',
-            textAlign: 'left',
-            cursor: 'pointer',
-            backgroundColor: '#f9f9f9'
-          }}
-        >
-          <strong>{player.first_name} {player.last_name}</strong><br />
-          {player.email} {player.phone_number && `(${player.phone_number})`}
-        </div>
+  key={player.player_id}
+  onClick={() => onPlayerSelect(player)}
+  style={{
+    padding: '0.5rem 0',
+    borderBottom: '1px solid #ccc',
+    textAlign: 'left',
+    cursor: 'pointer',
+    backgroundColor: '#f9f9f9'
+  }}
+>
+  <strong>
+    {player.first_name} {player.last_name}
+    {player.handicap !== null && !isNaN(Number(player.handicap))
+      ? ` (Hdcp: ${Math.round(Number(player.handicap))})`
+      : ' (Hdcp: Not set)'}
+
+  </strong>
+  <br />
+  {player.email} {player.phone_number && `(${player.phone_number})`}
+</div>
+
       ))}
     </>
   ) : (
-    <p>No matching players found.</p>
+    <div>
+      <p>No matching players found.</p>
+      <button
+  onClick={() => {
+    const [first_name = '', last_name = ''] = searchTerm.trim().split(' ');
+    onPlayerSelect({
+      first_name,
+      last_name,
+      email: '',
+      phone_number: ''
+    });
+  }}
+>
+  ➕ Add New Player
+</button>
+
+    </div>
   )
 ) : null}
 

@@ -64,6 +64,26 @@ router.post('/tournaments', (req, res) => {
   });
 });
 
+// Add initial handicap for a player
+router.post('/handicaps', (req, res) => {
+  const { player_id, handicap } = req.body;
+  const effective_date = new Date().toISOString().split('T')[0]; // format: YYYY-MM-DD
+
+  const sql = `
+    INSERT INTO custom_player_handicaps (player_id, handicap, effective_date)
+    VALUES (?, ?, ?)
+  `;
+
+  db.query(sql, [player_id, handicap, effective_date], (err, result) => {
+    if (err) {
+      console.error('❌ Error inserting handicap:', err);
+      return res.status(500).json({ message: 'Database error' });
+    }
+    res.status(201).json({ message: 'Initial handicap set' });
+  });
+});
+
+
 // Get all tournaments (history view)
 router.get('/tournaments', (req, res) => {
   const sql = `
@@ -174,8 +194,23 @@ router.post('/scores', (req, res) => {
   
 
   // Get all players
-router.get('/players', (req, res) => {
-    db.query('SELECT player_id, first_name, last_name FROM players ORDER BY last_name', (err, results) => {
+  router.get('/players', (req, res) => {
+    const sql = `
+      SELECT p.player_id, p.first_name, p.last_name, p.email, p.phone_number, h.handicap
+      FROM players p
+      LEFT JOIN (
+        SELECT player_id, handicap
+        FROM custom_player_handicaps h1
+        WHERE effective_date = (
+          SELECT MAX(effective_date)
+          FROM custom_player_handicaps h2
+          WHERE h2.player_id = h1.player_id
+        )
+      ) h ON p.player_id = h.player_id
+      ORDER BY p.last_name, p.first_name
+    `;
+  
+    db.query(sql, (err, results) => {
       if (err) {
         console.error('❌ Error fetching players:', err);
         return res.status(500).json({ message: 'Database error' });
@@ -183,6 +218,7 @@ router.get('/players', (req, res) => {
       res.json(results);
     });
   });
+  
   
   // Get single tournament by ID
 router.get('/tournaments/:id', (req, res) => {
@@ -224,5 +260,118 @@ router.get('/course-details/:id', (req, res) => {
       res.json(results[0]);
     });
   });
-   
+// ✅ Adjusted Scores (totals + hole-by-hole + handicap group)
+router.get('/scores/adjusted/:date', async (req, res) => {
+  const date = req.params.date;
+
+  const sql = `
+    SELECT *
+    FROM adjustedscores
+    WHERE round_date = ?
+  `;
+
+  try {
+    const [results] = await db.promise().query(sql, [date]);
+    res.json(results);
+  } catch (err) {
+    console.error('❌ Error fetching adjusted scores:', err);
+    res.status(500).json({ message: 'Database error' });
+  }
+});
+// ✅ Totals only for adjusted scores
+router.get('/scores/adjusted/totals/:date', (req, res) => {
+  const date = req.params.date;
+
+  const sql = `
+    SELECT player_id, adjusted_total_score
+    FROM adjustedscorestotals
+    WHERE round_date = ?
+  `;
+
+  db.query(sql, [date], (err, results) => {
+    if (err) {
+      console.error('❌ Error fetching adjusted totals:', err);
+      return res.status(500).json({ message: 'Database error' });
+    }
+    res.json(results);
+  });
+});
+// ✅ Full hole-by-hole actual scores (with actual_total_score only if not already present)
+router.get('/scores/actual/:date', async (req, res) => {
+  const date = req.params.date;
+
+  const sql = `
+    SELECT 
+      s.score_id,
+      s.player_id,
+      s.round_date,
+      s.holes_played,
+      s.hole_1, s.hole_2, s.hole_3, s.hole_4, s.hole_5, s.hole_6, s.hole_7, s.hole_8, s.hole_9,
+      s.hole_10, s.hole_11, s.hole_12, s.hole_13, s.hole_14, s.hole_15, s.hole_16, s.hole_17, s.hole_18,
+      p.first_name, 
+      p.last_name, 
+      CAST (h.handicap AS UNSIGNED) AS handicap_group,
+      c1.club_name AS front_nine_club, 
+      c1.course AS front_nine_course,
+      c2.club_name AS back_nine_club, 
+      c2.course AS back_nine_course,
+      (
+        COALESCE(s.hole_1, 0) + COALESCE(s.hole_2, 0) + COALESCE(s.hole_3, 0) +
+        COALESCE(s.hole_4, 0) + COALESCE(s.hole_5, 0) + COALESCE(s.hole_6, 0) +
+        COALESCE(s.hole_7, 0) + COALESCE(s.hole_8, 0) + COALESCE(s.hole_9, 0) +
+        COALESCE(s.hole_10, 0) + COALESCE(s.hole_11, 0) + COALESCE(s.hole_12, 0) +
+        COALESCE(s.hole_13, 0) + COALESCE(s.hole_14, 0) + COALESCE(s.hole_15, 0) +
+        COALESCE(s.hole_16, 0) + COALESCE(s.hole_17, 0) + COALESCE(s.hole_18, 0)
+      ) AS actual_total_score
+    FROM scores s
+    JOIN players p ON s.player_id = p.player_id
+    LEFT JOIN custom_player_handicaps h 
+      ON h.player_id = s.player_id
+      AND h.effective_date = (
+        SELECT MAX(effective_date)
+        FROM custom_player_handicaps
+        WHERE player_id = s.player_id AND effective_date <= s.round_date
+      )
+    LEFT JOIN courses c1 ON s.front_nine_course_id = c1.course_id
+    LEFT JOIN courses c2 ON s.back_nine_course_id = c2.course_id
+    WHERE s.round_date = ?
+  `;
+
+  try {
+    const [results] = await db.promise().query(sql, [date]);
+    res.json(results);
+  } catch (err) {
+    console.error('❌ Error fetching actual scores:', err);
+    res.status(500).json({ message: 'Database error' });
+  }
+});
+
+// ✅ Totals only for actual scores
+router.get('/scores/actual/totals/:date', (req, res) => {
+  const date = req.params.date;
+
+  const sql = `
+    SELECT player_id, 
+      (
+        COALESCE(hole_1, 0) + COALESCE(hole_2, 0) + COALESCE(hole_3, 0) +
+        COALESCE(hole_4, 0) + COALESCE(hole_5, 0) + COALESCE(hole_6, 0) +
+        COALESCE(hole_7, 0) + COALESCE(hole_8, 0) + COALESCE(hole_9, 0) +
+        COALESCE(hole_10, 0) + COALESCE(hole_11, 0) + COALESCE(hole_12, 0) +
+        COALESCE(hole_13, 0) + COALESCE(hole_14, 0) + COALESCE(hole_15, 0) +
+        COALESCE(hole_16, 0) + COALESCE(hole_17, 0) + COALESCE(hole_18, 0)
+      ) AS actual_total_score
+    FROM scores
+    WHERE round_date = ?
+  `;
+
+  db.query(sql, [date], (err, results) => {
+    if (err) {
+      console.error('❌ Error fetching actual totals:', err);
+      return res.status(500).json({ message: 'Database error' });
+    }
+    res.json(results);
+  });
+});
+
+
 module.exports = router;

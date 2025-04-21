@@ -6,8 +6,10 @@ const AddPlayerForm = ({ selectedPlayer }) => {
     first_name: '',
     last_name: '',
     email: '',
-    phone: ''
+    phone: '',
+    handicap: ''
   });
+ 
 
   const [playerId, setPlayerId] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
@@ -18,8 +20,10 @@ const AddPlayerForm = ({ selectedPlayer }) => {
         first_name: selectedPlayer.first_name || '',
         last_name: selectedPlayer.last_name || '',
         email: selectedPlayer.email || '',
-        phone: selectedPlayer.phone_number || ''
+        phone: selectedPlayer.phone_number || '',
+        handicap: selectedPlayer.handicap || ''
       });
+   
       setPlayerId(selectedPlayer.player_id);
       setSuccessMessage('');
     }
@@ -44,8 +48,11 @@ const AddPlayerForm = ({ selectedPlayer }) => {
       .then(response => {
         setSuccessMessage(playerId ? 'Player info updated!' : 'Player added successfully!');
         if (!playerId) {
-          setPlayerId(response.data.playerId);
+          const newId = response.data.playerId;
+          setPlayerId(newId);
+
         }
+        
       })
       .catch(error => {
         console.error('Error saving player:', error);
@@ -84,6 +91,24 @@ const AddPlayerForm = ({ selectedPlayer }) => {
           value={formData.phone}
           onChange={handleChange}
         />
+        <select
+  name="handicap"
+  value={formData.handicap}
+  onChange={handleChange}
+  required
+>
+  <option value="">H'Cap Group Selection *</option>
+  <option value="0">0: 3 Over Par (or Better)</option>
+  <option value="1">1: 4 to 6 Over Par</option>
+  <option value="2">2: 7 to 9 Over Par</option>
+  <option value="3">3: 10 to 13 Over Par</option>
+  <option value="4">4: 14 to 17 Over Par</option>
+  <option value="5">5: 18+ Over Par</option>
+</select>
+<p style={{ fontSize: '0.9rem', fontStyle: 'italic' }}>
+  *Group is subject to change in the future.
+</p>
+
         <button type="submit">{playerId ? 'Save Changes' : 'Add Player'}</button>
       </form>
 

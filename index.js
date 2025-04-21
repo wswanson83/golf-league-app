@@ -44,7 +44,7 @@ app.listen(PORT, () => {
 
 // add new player
 app.post('/players', (req, res) => {
-  const { first_name, last_name, email, phone } = req.body;
+  const { first_name, last_name, email, phone, handicap } = req.body;
 
   const sql = 'INSERT INTO Players (first_name, last_name, email, phone_number) VALUES (?, ?, ?, ?)';
   const values = [first_name, last_name, email, phone];
@@ -54,9 +54,24 @@ app.post('/players', (req, res) => {
       console.error('Error adding player:', error);
       return res.status(500).json({ error: 'Database error' });
     }
-    res.status(201).json({ message: 'Player added successfully', playerId: results.insertId });
+
+    const newPlayerId = results.insertId;
+
+    // ✅ Insert handicap into custom_player_handicaps
+    const handicapSql = 'INSERT INTO custom_player_handicaps (player_id, handicap, effective_date) VALUES (?, ?, CURDATE())';
+    const handicapValues = [newPlayerId, handicap];
+
+    db.query(handicapSql, handicapValues, (err2) => {
+      if (err2) {
+        console.error('Error adding handicap:', err2);
+        return res.status(500).json({ error: 'Failed to insert handicap' });
+      }
+
+      res.status(201).json({ message: 'Player added successfully', playerId: newPlayerId });
+    });
   });
 });
+
 
 app.put('/players/:id', (req, res) => {
   const playerId = req.params.id;
@@ -82,7 +97,22 @@ app.put('/players/:id', (req, res) => {
 
 // Example route to clearly test database interaction
 app.get('/players', (req, res) => {
-  const sql = 'SELECT * FROM Players ORDER BY last_name, first_name';
+  const sql = `
+  SELECT p.player_id, p.first_name, p.last_name, p.email, p.phone_number,
+         c.handicap
+  FROM Players p
+  LEFT JOIN (
+    SELECT player_id, handicap
+    FROM custom_player_handicaps h1
+    WHERE effective_date = (
+      SELECT MAX(effective_date)
+      FROM custom_player_handicaps h2
+      WHERE h1.player_id = h2.player_id
+    )
+  ) c ON p.player_id = c.player_id
+  ORDER BY p.last_name, p.first_name
+`;
+
 
   db.query(sql, (error, results) => {
     if (error) {
